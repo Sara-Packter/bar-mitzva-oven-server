@@ -4,11 +4,14 @@ import os
 
 app = Flask(__name__)
 
+# שמירת תשובות לפי תנור
+oven_responses = {}
+
 @app.route('/request_permission', methods=['GET'])
 def request_permission():
     oven_id = request.args.get('oven_id', 'default')
+    oven_responses[oven_id] = 'pending'
 
-    # פרטי Twilio מהסביבה
     account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
     auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
     from_number = os.environ.get('TWILIO_PHONE_NUMBER')
@@ -19,7 +22,6 @@ def request_permission():
 
     client = Client(account_sid, auth_token)
 
-    # שליחת שיחה שמריצה TwiML חיצוני עם הקלטה
     call = client.calls.create(
         url=f"https://bar-mitzva-oven-server.onrender.com/twiml?oven_id={oven_id}",
         to=to_number,
@@ -31,16 +33,33 @@ def request_permission():
 
 @app.route('/twiml', methods=['GET', 'POST'])
 def twiml():
-    # כתובת של קובץ MP3 (למשל הקלטה ששלחת לשרת קבצים או אפילו קישור זמני ל-Google Drive/Dropbox/S3)
-    audio_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"  # לדוגמה
+    oven_id = request.args.get('oven_id', 'default')
+
+    audio_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 
     xml = f'''
     <Response>
         <Play>{audio_url}</Play>
+        <Gather numDigits="1" action="/handle_response?oven_id={oven_id}" method="POST" timeout="10" finishOnKey="">
+            <Say>Press 1 to allow. Press 2 to deny.</Say>
+        </Gather>
     </Response>
     '''
     return Response(xml, mimetype='text/xml')
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/handle_response', methods=['POST'])
+def handle_response():
+    digit = request.form.get('Digits')
+    oven_id = request.args.get('oven_id', 'default')
+
+    if digit == '1':
+        oven_responses[oven_id] = 'granted'
+    elif digit == '2':
+        oven_responses[oven_id] = 'denied'
+    else:
+        oven_responses[oven_id] = 'invalid'
+
+    print(f"📞 Oven {oven_id} response: {oven_responses[oven_id]}")
+
+    return '<Response><Say>Thank you. Your response was received.</Say></Response>', 200
