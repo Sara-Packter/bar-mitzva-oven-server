@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from twilio.rest import Client
 import os
 
@@ -10,13 +10,12 @@ oven_responses = {}
 # קריאה להתחלת שיחה
 @app.route('/request_permission', methods=['GET'])
 def request_permission():
-    # מזהה התנור (למשל "2")
     oven_id = request.args.get('oven_id', 'default')
 
-    # שמור תשובה זמנית
+    # איפוס תשובה קודמת
     oven_responses[oven_id] = 'pending'
 
-    # פרטי Twilio
+    # פרטי טוויליו מהסביבה
     account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
     auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
     from_number = os.environ.get('TWILIO_PHONE_NUMBER')
@@ -27,16 +26,9 @@ def request_permission():
 
     client = Client(account_sid, auth_token)
 
-    # יצירת שיחה עם הודעה קולית
+    # יוצרים שיחה ומפנים את טוויליו ל-URL שלנו
     call = client.calls.create(
-        twiml=f'''
-        <Response>
-            <Say language="he-IL" voice="Polly.Carmit">
-                האם לאשר הפעלת תנור? לחץ 1 לאישור, או 2 לדחייה.
-            </Say>
-            <Gather numDigits="1" action="/handle_response?oven_id={oven_id}" method="POST" timeout="10"/>
-        </Response>
-        ''',
+        url=f"https://bar-mitzva-oven-server.onrender.com/twiml?oven_id={oven_id}",
         to=to_number,
         from_=from_number
     )
@@ -44,7 +36,24 @@ def request_permission():
     return f"Call initiated to {to_number} with SID {call.sid}", 200
 
 
-# קבלת תגובת המשתמש (לחיצה)
+# TwiML Response שמוקרא בשיחה
+@app.route('/twiml', methods=['GET', 'POST'])
+def twiml():
+    oven_id = request.args.get('oven_id', 'default')
+
+    xml = f'''
+    <Response>
+        <Say language="he-IL" voice="Polly.Carmit">
+            האם לאשר הפעלת תנור מספר {oven_id}? לחץ 1 לאישור, או 2 לדחייה.
+        </Say>
+        <Gather numDigits="1" action="/handle_response?oven_id={oven_id}" method="POST" timeout="10"/>
+    </Response>
+    '''
+
+    return Response(xml, mimetype='application/xml')
+
+
+# קבלת התגובה מהמשתמש (1/2)
 @app.route('/handle_response', methods=['POST'])
 def handle_response():
     digit = request.form.get('Digits')
@@ -60,7 +69,7 @@ def handle_response():
     return '<Response><Say>תודה. התקבלה תשובתך.</Say></Response>', 200
 
 
-# שאילתת תשובה מהצד של ה-ESP32
+# שליפת סטטוס ל-ESP
 @app.route('/get_response', methods=['GET'])
 def get_response():
     oven_id = request.args.get('oven_id', 'default')
@@ -72,6 +81,7 @@ def get_response():
         return jsonify({"status": "no"})
     else:
         return jsonify({"status": "pending"})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
