@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# תשובות זמניות לפי תנור
+# זיכרון זמני לתשובות תנור
 oven_responses = {}
 
 @app.route('/request_permission', methods=['GET'])
@@ -12,7 +12,7 @@ def request_permission():
     oven_id = request.args.get('oven_id', 'default')
     oven_responses[oven_id] = 'pending'
 
-    # פרטי חשבון Twilio
+    # משתני סביבה
     account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
     auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
     from_number = os.environ.get('TWILIO_PHONE_NUMBER')
@@ -23,9 +23,11 @@ def request_permission():
 
     client = Client(account_sid, auth_token)
 
-    # בקשה לשיחה
+    # TwiML ייקרא מהשרת שלנו
+    twiml_url = f"https://bar-mitzva-oven-server.onrender.com/twiml?oven_id={oven_id}"
+
     call = client.calls.create(
-        url=f"https://bar-mitzva-oven-server.onrender.com/twiml?oven_id={oven_id}",
+        url=twiml_url,
         to=to_number,
         from_=from_number
     )
@@ -36,15 +38,13 @@ def request_permission():
 @app.route('/twiml', methods=['GET', 'POST'])
 def twiml():
     oven_id = request.args.get('oven_id', 'default')
-
-    # 🟡 כאן תחליפי לקובץ MP3 קצר משלך:
-    audio_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    audio_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"  # החליפי להקלטה שלך
 
     xml = f'''
     <Response>
         <Gather numDigits="1" action="/handle_response?oven_id={oven_id}" method="POST" timeout="10">
             <Play>{audio_url}</Play>
-            <Say>Press 1 to allow. Press 2 to deny.</Say>
+            <Say>Press 1 to allow, or 2 to deny.</Say>
         </Gather>
         <Say>No input received.</Say>
     </Response>
@@ -58,9 +58,9 @@ def handle_response():
     oven_id = request.args.get('oven_id', 'default')
 
     if digit == '1':
-        oven_responses[oven_id] = 'granted'
+        oven_responses[oven_id] = 'yes'
     elif digit == '2':
-        oven_responses[oven_id] = 'denied'
+        oven_responses[oven_id] = 'no'
     else:
         oven_responses[oven_id] = 'invalid'
 
@@ -73,13 +73,10 @@ def handle_response():
 def get_response():
     oven_id = request.args.get('oven_id', 'default')
     status = oven_responses.get(oven_id, 'pending')
+    if status == 'pending':
+        return "", 200, {'Content-Type': 'text/plain'}
+    return status, 200, {'Content-Type': 'text/plain'}
 
-    if status == 'granted':
-        return {"status": "yes"}
-    elif status == 'denied':
-        return {"status": "no"}
-    else:
-        return {"status": "pending"}
 
 if __name__ == '__main__':
     app.run(debug=True)
