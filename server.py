@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# שמירת תשובות לפי תנור
+# תשובות זמניות לפי תנור
 oven_responses = {}
 
 @app.route('/request_permission', methods=['GET'])
@@ -12,6 +12,7 @@ def request_permission():
     oven_id = request.args.get('oven_id', 'default')
     oven_responses[oven_id] = 'pending'
 
+    # פרטי חשבון Twilio
     account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
     auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
     from_number = os.environ.get('TWILIO_PHONE_NUMBER')
@@ -22,6 +23,7 @@ def request_permission():
 
     client = Client(account_sid, auth_token)
 
+    # בקשה לשיחה
     call = client.calls.create(
         url=f"https://bar-mitzva-oven-server.onrender.com/twiml?oven_id={oven_id}",
         to=to_number,
@@ -35,14 +37,16 @@ def request_permission():
 def twiml():
     oven_id = request.args.get('oven_id', 'default')
 
+    # 🟡 כאן תחליפי לקובץ MP3 קצר משלך:
     audio_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 
     xml = f'''
     <Response>
-        <Play>{audio_url}</Play>
-        <Gather numDigits="1" action="/handle_response?oven_id={oven_id}" method="POST" timeout="10" finishOnKey="">
+        <Gather numDigits="1" action="/handle_response?oven_id={oven_id}" method="POST" timeout="10">
+            <Play>{audio_url}</Play>
             <Say>Press 1 to allow. Press 2 to deny.</Say>
         </Gather>
+        <Say>No input received.</Say>
     </Response>
     '''
     return Response(xml, mimetype='text/xml')
@@ -63,3 +67,19 @@ def handle_response():
     print(f"📞 Oven {oven_id} response: {oven_responses[oven_id]}")
 
     return '<Response><Say>Thank you. Your response was received.</Say></Response>', 200
+
+
+@app.route('/get_response', methods=['GET'])
+def get_response():
+    oven_id = request.args.get('oven_id', 'default')
+    status = oven_responses.get(oven_id, 'pending')
+
+    if status == 'granted':
+        return {"status": "yes"}
+    elif status == 'denied':
+        return {"status": "no"}
+    else:
+        return {"status": "pending"}
+
+if __name__ == '__main__':
+    app.run(debug=True)
