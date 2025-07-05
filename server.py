@@ -38,7 +38,7 @@ def request_permission():
 @app.route('/twiml', methods=['GET', 'POST'])
 def twiml():
     oven_id = request.args.get('oven_id', 'default')
-    audio_url = "oven_record.mp3"  
+    audio_url = "https://github.com/Sara-Packter/bar-mitzva-oven-server/blob/main/oven_record.mp3"  
     action_url = f"https://bar-mitzva-oven-server.onrender.com/handle_response?oven_id={oven_id}"  # כתובת מלאה
 
     xml = f'''
