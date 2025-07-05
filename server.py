@@ -38,11 +38,12 @@ def request_permission():
 @app.route('/twiml', methods=['GET', 'POST'])
 def twiml():
     oven_id = request.args.get('oven_id', 'default')
-    audio_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"  # החליפי להקלטה שלך
+    audio_url = "oven_record.mp3"  
+    action_url = f"https://bar-mitzva-oven-server.onrender.com/handle_response?oven_id={oven_id}"  # כתובת מלאה
 
     xml = f'''
     <Response>
-        <Gather numDigits="1" action="/handle_response?oven_id={oven_id}" method="POST" timeout="10">
+        <Gather numDigits="1" action="{action_url}" method="POST" timeout="10">
             <Play>{audio_url}</Play>
             <Say>Press 1 to allow, or 2 to deny.</Say>
         </Gather>
