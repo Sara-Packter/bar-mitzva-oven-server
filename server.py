@@ -45,7 +45,6 @@ def twiml():
     <Response>
         <Gather numDigits="1" action="{action_url}" method="POST" timeout="10">
             <Play>{audio_url}</Play>
-            <Say>Press 1 to allow, or 2 to deny.</Say>
         </Gather>
         <Say>No input received.</Say>
     </Response>
@@ -67,7 +66,7 @@ def handle_response():
 
     print(f"📞 Oven {oven_id} response: {oven_responses[oven_id]}")
 
-    return '<Response><Say>Thank you. Your response was received.</Say></Response>', 200
+    return '<Response></Response>', 200 #Embedd a record
 
 
 @app.route('/get_response', methods=['GET'])
