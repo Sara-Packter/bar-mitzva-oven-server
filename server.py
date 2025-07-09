@@ -4,7 +4,6 @@ import os
 
 app = Flask(__name__)
 
-# זיכרון זמני לתשובות תנור
 oven_responses = {}
 
 @app.route('/ping', methods=['GET'])
@@ -70,7 +69,8 @@ def handle_response():
     print(f"📞 Oven {oven_id} response: {oven_responses[oven_id]}")
 
     audio = "https://github.com/Sara-Packter/bar-mitzva-oven-server/raw/refs/heads/main/response_thanks.mp3"
-      xml = f'''
+    
+    xml = f'''
     <Response>
         <Play>{audio}</Play>
         <Hangup/>
