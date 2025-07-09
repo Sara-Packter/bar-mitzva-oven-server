@@ -7,6 +7,10 @@ app = Flask(__name__)
 # זיכרון זמני לתשובות תנור
 oven_responses = {}
 
+@app.route('/ping', methods=['GET'])
+def ping():
+    return 'pong', 200
+
 @app.route('/request_permission', methods=['GET'])
 def request_permission():
     oven_id = request.args.get('oven_id', 'default')
