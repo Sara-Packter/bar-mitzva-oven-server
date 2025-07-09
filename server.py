@@ -43,14 +43,13 @@ def request_permission():
 def twiml():
     oven_id = request.args.get('oven_id', 'default') 
     audio_url = "https://github.com/Sara-Packter/bar-mitzva-oven-server/raw/refs/heads/main/oven_rec.mp3"
-    action_url = f"https://bar-mitzva-oven-server.onrender.com/handle_response?oven_id={oven_id}"  # כתובת מלאה
+    action_url = f"https://bar-mitzva-oven-server.onrender.com/handle_response?oven_id={oven_id}"
 
     xml = f'''
     <Response>
         <Gather numDigits="1" action="{action_url}" method="POST" timeout="10">
             <Play>{audio_url}</Play>
         </Gather>
-        <Say>No input received.</Say>
     </Response>
     '''
     return Response(xml, mimetype='text/xml')
@@ -70,7 +69,15 @@ def handle_response():
 
     print(f"📞 Oven {oven_id} response: {oven_responses[oven_id]}")
 
-    return '<Response></Response>', 200 #Embedd a record
+    audio = "https://github.com/Sara-Packter/bar-mitzva-oven-server/raw/refs/heads/main/response_thanks.mp3"
+      xml = f'''
+    <Response>
+        <Play>{audio}</Play>
+        <Hangup/>
+    </Response>
+    '''
+
+    return Response(xml, mimetype='text/xml')
 
 
 @app.route('/get_response', methods=['GET'])
